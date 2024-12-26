@@ -1,25 +1,40 @@
-import logo from './logo.svg';
-import './App.css';
+import MainChatComponent from "./components/MainChatComponent";
+import "bootstrap/dist/css/bootstrap.min.css";
+import React, { useEffect, useContext } from "react";
+import ChatContext from "./context/ChatContext";
+import { useIndexedDB } from "./hooks/useIndexedDB";
+import { preloadedContacts, preloadedMessages } from "./data/initialData";
 
-function App() {
+const App = () => {
+  const { dispatch, state } = useContext(ChatContext);
+  const { saveContacts, saveMessages, getContacts, getMessages } = useIndexedDB();
+
+  //filling some initial data in the indexed db
+  useEffect(() => {
+    const initializeData =  async () => {
+      await saveContacts(preloadedContacts);
+      await saveMessages(preloadedMessages);
+      dispatch({type : 'SET_INITIAL_STATE'});
+    }
+    initializeData();
+  }, []);
+
+  //updating global state as per the changes
+  useEffect(() => {
+    const setData = async() => {
+      if(state.initialDataLoaded){
+        const existingContacts = await getContacts();
+        dispatch({ type: "SET_CONTACTS", payload: existingContacts });
+        const existingMessages = await getMessages(state.activeContactId);
+        dispatch({type : "SET_MESSAGES", payload : existingMessages})
+      }
+    }
+    setData();
+  }, [state.initialDataLoaded, state.activeContactId])
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <MainChatComponent/>
   );
-}
+};
 
 export default App;
